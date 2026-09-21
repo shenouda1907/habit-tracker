@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Habit & Task Tracker</title>
+  <style>
+    :root {
+      --bg-page: #0F172A;
+      --panel: #1B2338;
+      --alt-panel: #222C45;
+      --border: #2E3A55;
+      --text-main: #E6EDF7;
+      --text-muted: #8FA0BC;
+      --dead-cell: #162033;
+      --strikethrough: #506885;
+      --w1: #7C5CFF;
+      --w2: #3B82F6;
+      --w3: #2DD4BF;
+      --w4: #EC4899;
+      --w5: #34D399;
+      --accent-yellow: #F59E0B;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+    body { background-color: var(--bg-page); color: var(--text-main); min-height: 100vh; padding: 20px; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+    .logo { font-size: 20px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+    .tabs { display: flex; gap: 10px; }
+    .tab-btn { background: var(--panel); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+    .tab-btn.active { background: var(--w1); color: #fff; border-color: var(--w1); }
+    .tab-btn:hover:not(.active) { background: var(--alt-panel); color: #fff; }
+    
+    .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .kpi-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .kpi-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+    .kpi-val { font-size: 20px; font-weight: bold; }
+    
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    
+    /* Table styling for Habits */
+    .table-wrapper { overflow-x: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { border: 1px solid var(--border); text-align: center; padding: 6px 4px; min-width: 32px; }
+    th.habit-col, td.habit-col { text-align: left; min-width: 170px; max-width: 220px; padding-left: 10px; font-weight: 500; }
+    .dead-day { background-color: var(--dead-cell) !important; color: var(--border) !important; cursor: not-allowed; }
+    
+    tr:nth-child(even) td { background-color: var(--panel); }
+    tr:nth-child(odd) td { background-color: var(--alt-panel); }
+    
+    .habit-check { width: 16px; height: 16px; cursor: pointer; accent-color: var(--w1); }
+    
+    /* Tasks layout */
+    .task-board { display: grid; grid-template-columns: repeat(7, minmax(210px, 1fr)); gap: 15px; overflow-x: auto; padding-bottom: 15px; }
+    .day-column { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+    .day-header { padding: 10px; text-align: center; font-weight: bold; color: #fff; }
+    .day-sub { background: var(--alt-panel); padding: 6px; text-align: center; font-size: 12px; border-bottom: 1px solid var(--border); }
+    .task-list { padding: 10px; display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+    .task-slot { display: flex; align-items: center; gap: 8px; background: var(--alt-panel); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; }
+    .task-slot input[type="text"] { background: transparent; border: none; outline: none; color: var(--text-main); font-size: 12px; width: 100%; }
+    .task-slot input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+    .task-slot.completed input[type="text"] { text-decoration: line-through; color: var(--strikethrough); }
+    
+    .mindset-box { background: var(--alt-panel); border-top: 1px solid var(--border); padding: 10px; }
+    .mindset-title { font-size: 11px; font-weight: bold; text-align: center; margin-bottom: 8px; text-transform: uppercase; }
+    .mindset-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 12px; color: var(--text-muted); }
+    .mindset-row input { width: 45px; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; color: #fff; text-align: center; padding: 2px; }
+    
+    .btn-action { background: var(--alt-panel); color: var(--text-main); border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .btn-action:hover { background: var(--border); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">⚡ HABIT + TASK TRACKER</div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('habits', this)">Habits</button>
+      <button class="tab-btn" onclick="switchTab('tasks', this)">Tasks</button>
+      <button class="tab-btn" onclick="switchTab('guide', this)">Start Here</button>
+    </div>
+  </header>
+
+  <!-- TAB 1: HABITS -->
+  <section id="tab-habits" class="view-section active">
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <div class="kpi-label">Month</div>
+        <div class="kpi-val" style="color: var(--text-main);">Sep 2026</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Habits Tracked</div>
+        <div class="kpi-val" id="habits-count-kpi" style="color: var(--w1);">10</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total Ticks</div>
+        <div class="kpi-val" id="habits-ticks-kpi" style="color: var(--w3);">22</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Progress</div>
+        <div class="kpi-val" id="habits-progress-kpi" style="color: var(--w5);">7.3%</div>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table id="habits-table"></table>
+    </div>
+  </section>
+
+  <!-- TAB 2: TASKS -->
+  <section id="tab-tasks" class="view-section">
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <div class="kpi-label">Week Starting</div>
+        <div class="kpi-val" style="color: var(--text-main); font-size: 16px;">Sun 30 Aug 2026</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tasks Planned</div>
+        <div class="kpi-val" id="tasks-planned-kpi" style="color: var(--w1);">5</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Completed</div>
+        <div class="kpi-val" id="tasks-completed-kpi" style="color: var(--w3);">4</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Completion</div>
+        <div class="kpi-val" id="tasks-progress-kpi" style="color: var(--w5);">80%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg Mindset</div>
+        <div class="kpi-val" id="tasks-mindset-kpi" style="color: var(--w4);">7.7</div>
+      </div>
+    </div>
+
+    <div class="task-board" id="task-board"></div>
+  </section>
+
+  <!-- TAB 3: START HERE -->
+  <section id="tab-guide" class="view-section">
+    <div style="max-width: 650px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 25px; margin: 20px auto;">
+      <h2 style="color: var(--w1); margin-bottom: 12px;">HOW TO USE IT</h2>
+      <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 15px;">
+        • <strong>Habits:</strong> Review once at the end of the day. Check what happened, enter your Mood & Motivation (1-10), and close it.<br>
+        • <strong>Tasks:</strong> Manage up to 10 slots per day. Checking a task crosses it out automatically.<br>
+        • <strong>Storage:</strong> All your changes are automatically saved in your browser (LocalStorage).
+      </p>
+      <button class="btn-action" onclick="resetSampleData()">Reset to Spreadsheet Sample Data</button>
+    </div>
+  </section>
+
+  <script>
+    const HABIT_NAMES = [
+      "Wake up early", "Exercise or movement", "Read 20 pages",
+      "Deep work block", "Plan tomorrow", "No phone first hour",
+      "Drink 2L water", "Journal", "Learn something new", "Stretch"
+    ];
+
+    const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const DAY_COLORS = ["#7C5CFF", "#3B82F6", "#06B6D4", "#10B981", "#F59E0B", "#F97316", "#EC4899"];
+    const WEEK_COLORS = ["#7C5CFF", "#3B82F6", "#2DD4BF", "#EC4899", "#34D399"];
+
+    let habitsState = JSON.parse(localStorage.getItem('tracker_habits_data')) || initHabits();
+    let tasksState = JSON.parse(localStorage.getItem('tracker_tasks_data')) || initTasks();
+
+    function initHabits() {
+      const grid = Array.from({length: 10}, () => Array(31).fill(false));
+      // Sample data ticks matching Excel Rows 7-16
+      grid[2][0] = true;  // Day 1 Read 20 pages
+      grid[5][0] = true;  // Day 1 No phone
+      grid[4][1] = true;  // Day 2 Plan tomorrow
+      grid[5][1] = true;  // Day 2 No phone
+      grid[7][1] = true;  // Day 2 Journal
+      grid[0][2] = true;  // Day 3 Wake up early
+      grid[3][2] = true;  // Day 3 Deep work
+      grid[4][2] = true;  // Day 3 Plan tomorrow
+      grid[5][2] = true;  // Day 3 No phone
+      grid[6][2] = true;  // Day 3 Drink 2L water
+      grid[7][2] = true;  // Day 3 Journal
+      grid[9][2] = true;  // Day 3 Stretch
+
+      const mood = Array(31).fill("");
+      mood[0] = 7; mood[1] = 6; mood[2] = 8;
+      const motivation = Array(31).fill("");
+      motivation[0] = 8; motivation[1] = 6; motivation[2] = 9;
+
+      return { habits: [...HABIT_NAMES], grid, mood, motivation };
+    }
+
+    function initTasks() {
+      const days = Array.from({length: 7}, () => ({
+        tasks: Array.from({length: 10}, () => ({ text: "", done: false })),
+        mindset: { energy: "", focus: "", motivation: "" }
+      }));
+
+      // Sunday sample data
+      days[0].tasks[0] = { text: "Weekly review and plan", done: true };
+      days[0].tasks[1] = { text: "Clear inbox", done: true };
+      days[0].tasks[2] = { text: "Workout session", done: true };
+      days[0].tasks[3] = { text: "Grocery run", done: false };
+      days[0].tasks[4] = { text: "Read 20 pages", done: true };
+      days[0].mindset = { energy: "8", focus: "7", motivation: "8" };
+
+      return days;
+    }
+
+    function save() {
+      localStorage.setItem('tracker_habits_data', JSON.stringify(habitsState));
+      localStorage.setItem('tracker_tasks_data', JSON.stringify(tasksState));
+      calcHabits();
+      calcTasks();
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    function renderHabits() {
+      const table = document.getElementById('habits-table');
+      let html = '<thead><tr><th class="habit-col" style="background:#1B2338;">MY HABITS</th>';
+      for (let d = 1; d <= 31; d++) {
+        const weekIdx = Math.min(Math.floor((d - 1) / 7), 4);
+        const color = d === 31 ? '#162033' : WEEK_COLORS[weekIdx];
+        html += `<th style="background:${color}; color:#fff;">${d}</th>`;
+      }
+      html += '<th style="background:#222C45; color:var(--accent-yellow);">Done</th><th style="background:#222C45; color:var(--accent-yellow);">Rate</th></tr>';
+
+      const dayLetters = ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"];
+      html += '<tr><th class="habit-col" style="background:#1B2338; color:var(--text-muted); font-size:11px;">Day</th>';
+      for (let d = 1; d <= 31; d++) {
+        const isDead = d > 30;
+        html += `<th class="${isDead ? 'dead-day' : ''}" style="color:var(--text-muted); font-size:10px;">${isDead ? '' : dayLetters[(d-1)%7]}</th>`;
+      }
+      html += '<th></th><th></th></tr></thead><tbody>';
+
+      habitsState.habits.forEach((habit, h) => {
+        html += `<tr><td class="habit-col">${habit}</td>`;
+        for (let d = 0; d < 31; d++) {
+          if (d === 30) html += '<td class="dead-day"></td>';
+          else html += `<td><input type="checkbox" class="habit-check" ${habitsState.grid[h][d] ? 'checked' : ''} onchange="toggleHabit(${h}, ${d}, this.checked)"></td>`;
+        }
+        html += `<td id="h-done-${h}" style="font-weight:bold;">0</td><td id="h-rate-${h}" style="color:var(--w5); font-weight:bold;">0%</td></tr>`;
+      });
+
+      // Done row
+      html += '<tr><td class="habit-col" style="font-weight:bold; color:var(--text-muted);">Done</td>';
+      for (let d = 0; d < 31; d++) html += `<td id="d-done-${d}" class="${d===30?'dead-day':''}" style="font-weight:bold;">0</td>`;
+      html += '<td></td><td></td></tr>';
+
+      // Progress row
+      html += '<tr><td class="habit-col" style="font-weight:bold; color:var(--text-muted);">Progress</td>';
+      for (let d = 0; d < 31; d++) html += `<td id="d-prog-${d}" class="${d===30?'dead-day':''}" style="font-size:10px; color:var(--text-muted);">0%</td>`;
+      html += '<td></td><td></td></tr>';
+
+      // Mood row
+      html += '<tr><td class="habit-col" style="color:var(--w4); font-weight:bold;">Mood (1-10)</td>';
+      for (let d = 0; d < 31; d++) {
+        if (d === 30) html += '<td class="dead-day"></td>';
+        else html += `<td><input type="number" min="1" max="10" value="${habitsState.mood[d]}" style="width:26px; background:transparent; border:none; color:var(--w4); font-weight:bold; text-align:center;" onchange="habitsState.mood[${d}]=this.value; save();"></td>`;
+      }
+      html += '<td></td><td></td></tr>';
+
+      // Motivation row
+      html += '<tr><td class="habit-col" style="color:var(--w2); font-weight:bold;">Motivation (1-10)</td>';
+      for (let d = 0; d < 31; d++) {
+        if (d === 30) html += '<td class="dead-day"></td>';
+        else html += `<td><input type="number" min="1" max="10" value="${habitsState.motivation[d]}" style="width:26px; background:transparent; border:none; color:var(--w2); font-weight:bold; text-align:center;" onchange="habitsState.motivation[${d}]=this.value; save();"></td>`;
+      }
+      html += '<td></td><td></td></tr>';
+
+      // Day score
+      html += '<tr><td class="habit-col" style="color:var(--text-muted);">Day Score</td>';
+      for (let d = 0; d < 31; d++) html += `<td id="d-score-${d}" class="${d===30?'dead-day':''}" style="font-size:10px; color:var(--text-muted);">-</td>`;
+      html += '<td></td><td></td></tr></tbody>';
+
+      table.innerHTML = html;
+      calcHabits();
+    }
+
+    function toggleHabit(h, d, val) {
+      habitsState.grid[h][d] = val;
+      save();
+    }
+
+    function calcHabits() {
+      let totalTicks = 0;
+      const daysInMonth = 30; // September
+
+      habitsState.habits.forEach((_, h) => {
+        let habitDone = 0;
+        for (let d = 0; d < daysInMonth; d++) {
+          if (habitsState.grid[h][d]) habitDone++;
+        }
+        totalTicks += habitDone;
+        const eD = document.getElementById(`h-done-${h}`);
+        const eR = document.getElementById(`h-rate-${h}`);
+        if (eD) eD.innerText = habitDone;
+        if (eR) eR.innerText = Math.round((habitDone / daysInMonth) * 100) + '%';
+      });
+
+      for (let d = 0; d < daysInMonth; d++) {
+        let dayDone = 0;
+        for (let h = 0; h < 10; h++) {
+          if (habitsState.grid[h][d]) dayDone++;
+        }
+        const edD = document.getElementById(`d-done-${d}`);
+        const edP = document.getElementById(`d-prog-${d}`);
+        const edS = document.getElementById(`d-score-${d}`);
+        if (edD) edD.innerText = dayDone;
+        if (edP) edP.innerText = Math.round((dayDone / 10) * 100) + '%';
+
+        const m = parseFloat(habitsState.mood[d]);
+        const mot = parseFloat(habitsState.motivation[d]);
+        let valid = [m, mot].filter(v => !isNaN(v));
+        if (valid.length > 0 && edS) {
+          edS.innerText = Math.round((valid.reduce((a,b)=>a+b, 0) / valid.length) * 10) + '%';
+        } else if (edS) {
+          edS.innerText = '-';
+        }
+      }
+
+      document.getElementById('habits-ticks-kpi').innerText = totalTicks;
+      document.getElementById('habits-progress-kpi').innerText = ((totalTicks / (10 * daysInMonth)) * 100).toFixed(1) + '%';
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('task-board');
+      let html = '';
+      const dates = ["30 Aug", "31 Aug", "1 Sep", "2 Sep", "3 Sep", "4 Sep", "5 Sep"];
+
+      DAYS_OF_WEEK.forEach((dayName, d) => {
+        const color = DAY_COLORS[d];
+        const dayData = tasksState[d];
+
+        html += `
+          <div class="day-column">
+            <div class="day-header" style="background:${color};">${dayName}</div>
+            <div class="day-sub">
+              <span>${dates[d]}</span> • <strong id="task-pct-${d}" style="color:${color};">0%</strong>
+            </div>
+            <div class="task-list">
+        `;
+
+        dayData.tasks.forEach((task, t) => {
+          html += `
+            <div class="task-slot ${task.done ? 'completed' : ''}" id="ts-${d}-${t}">
+              <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${d}, ${t}, this.checked)">
+              <input type="text" placeholder="Task ${t + 1}" value="${task.text}" oninput="tasksState[${d}].tasks[${t}].text=this.value; save();">
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+            <div style="padding:8px 10px; font-size:11px; display:flex; justify-content:space-between; background:var(--bg-page); border-top:1px solid var(--border);">
+              <span style="color:var(--text-muted);">Completed: <strong id="t-comp-${d}" style="color:${color};">0</strong></span>
+              <span style="color:var(--text-muted);">Remaining: <strong id="t-rem-${d}">0</strong></span>
+            </div>
+            <div class="mindset-box">
+              <div class="mindset-title" style="color:${color};">Mindset Check-in</div>
+              <div class="mindset-row"><span>Energy</span><input type="number" min="1" max="10" value="${dayData.mindset.energy}" onchange="tasksState[${d}].mindset.energy=this.value; save();"></div>
+              <div class="mindset-row"><span>Focus</span><input type="number" min="1" max="10" value="${dayData.mindset.focus}" onchange="tasksState[${d}].mindset.focus=this.value; save();"></div>
+              <div class="mindset-row"><span>Motivation</span><input type="number" min="1" max="10" value="${dayData.mindset.motivation}" onchange="tasksState[${d}].mindset.motivation=this.value; save();"></div>
+              <div class="mindset-row" style="margin-top:6px; font-weight:bold;"><span>Score</span><span id="t-score-${d}" style="color:${color};">-</span></div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      calcTasks();
+    }
+
+    function toggleTask(d, t, val) {
+      tasksState[d].tasks[t].done = val;
+      const slot = document.getElementById(`ts-${d}-${t}`);
+      if (val) slot.classList.add('completed');
+      else slot.classList.remove('completed');
+      save();
+    }
+
+    function calcTasks() {
+      let planned = 0;
+      let completed = 0;
+      let mindsetScores = [];
+
+      tasksState.forEach((day, d) => {
+        let dayP = 0;
+        let dayC = 0;
+        day.tasks.forEach(t => {
+          if (t.text.trim() !== "") {
+            dayP++;
+            if (t.done) dayC++;
+          }
+        });
+
+        planned += dayP;
+        completed += dayC;
+
+        const ep = document.getElementById(`task-pct-${d}`);
+        const ec = document.getElementById(`t-comp-${d}`);
+        const er = document.getElementById(`t-rem-${d}`);
+        if (ep) ep.innerText = dayP > 0 ? Math.round((dayC / dayP) * 100) + '%' : '0%';
+        if (ec) ec.innerText = dayC;
+        if (er) er.innerText = dayP - dayC;
+
+        const e = parseFloat(day.mindset.energy);
+        const f = parseFloat(day.mindset.focus);
+        const m = parseFloat(day.mindset.motivation);
+        const valid = [e, f, m].filter(v => !isNaN(v));
+        const es = document.getElementById(`t-score-${d}`);
+        if (valid.length > 0 && es) {
+          const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
+          mindsetScores.push(avg);
+          es.innerText = Math.round(avg * 10) + '%';
+        } else if (es) {
+          es.innerText = '-';
+        }
+      });
+
+      document.getElementById('tasks-planned-kpi').innerText = planned;
+      document.getElementById('tasks-completed-kpi').innerText = completed;
+      document.getElementById('tasks-progress-kpi').innerText = planned > 0 ? Math.round((completed / planned) * 100) + '%' : '0%';
+      document.getElementById('tasks-mindset-kpi').innerText = mindsetScores.length > 0 ? (mindsetScores.reduce((a,b)=>a+b,0) / mindsetScores.length).toFixed(1) : '0.0';
+    }
+
+    function resetSampleData() {
+      localStorage.removeItem('tracker_habits_data');
+      localStorage.removeItem('tracker_tasks_data');
+      habitsState = initHabits();
+      tasksState = initTasks();
+      renderHabits();
+      renderTasks();
+    }
+
+    renderHabits();
+    renderTasks();
+  </script>
+</body>
+</html>
